@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"github.com/bxcodec/faker"
+	"fmt"
 	_ "github.com/jackc/pgx/stdlib"
 	"github.com/jackc/pgx/v4"
+	"io/ioutil"
 	"log"
 )
 
@@ -52,19 +52,31 @@ func main() {
 	//}
 	//defer rows.Close()
 
-	var reqv req
-	var resp resp
-	var transaction_d string
-	for i := 1; i < 100000; i++ {
-		faker.FakeData(&reqv)
-		faker.FakeData(&resp)
-		reqvJson, _ := json.Marshal(reqv)
-		respJson, _ := json.Marshal(resp)
-		err := conn.QueryRow(context.Background(), `insert into request_response values (default, default, default, $1, $2) returning guid_transaction`,
-			reqvJson, respJson).Scan(&transaction_d)
-		if err != nil {
-			log.Fatal(err)
-		}
+	//var reqv req
+	//var resp resp
+	var transaction_resp string
+
+	data, err := ioutil.ReadFile("fat_json.json")
+
+	if err != nil {
+		log.Fatal(err)
 	}
-	//fmt.Println(conn)
+	err = conn.QueryRow(context.Background(), `insert into request_response values (default, default, $1, $2) returning response`,
+		data, data).Scan(&transaction_resp)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(transaction_resp)
+	//for i := 1; i < 100000; i++ {
+	//	faker.FakeData(&reqv)
+	//	faker.FakeData(&resp)
+	//	reqvJson, _ := json.Marshal(reqv)
+	//	respJson, _ := json.Marshal(resp)
+	//	err := conn.QueryRow(context.Background(), `insert into request_response values (default, default, default, $1, $2) returning guid_transaction`,
+	//		reqvJson, respJson).Scan(&transaction_resp)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//}
+
 }

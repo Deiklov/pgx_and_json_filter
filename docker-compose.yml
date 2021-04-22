@@ -12,3 +12,21 @@ services:
     ports:
       - "5432:5432"
     network_mode: host
+  nats:
+    image: nats:alpine
+    network_mode: host
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+  def-job:
+    build:
+      context: ./
+      dockerfile: job.Dockerfile
+    container_name: def-job
+    network_mode: host
+  cron-job:
+    build:
+      context: ./
+      dockerfile: cronJob.Dockerfile
+    container_name: cron-job
+    network_mode: host

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	_ "github.com/jackc/pgx/stdlib"
 	"github.com/jackc/pgx/v4"
+	"github.com/nats-io/nats.go"
 	"io/ioutil"
 	"log"
 )
@@ -36,24 +37,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	//var guid string
-	//rows, err := conn.Query(context.Background(), `select guid_transaction
-	//from request_response
-	//where (request -> 'Applicant') @> '{"Cur_Flt": ["78"]}';`)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//for rows.Next() {
-	//	err = rows.Scan(&guid)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//	fmt.Println(guid)
-	//}
-	//defer rows.Close()
+	nc, _ := nats.Connect(nats.DefaultURL)
+	nc.Publish("foo", []byte("Hello World"))
 
-	//var reqv req
-	//var resp resp
 	var transaction_resp string
 
 	data, err := ioutil.ReadFile("fat_json.json")
@@ -67,16 +53,5 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println(transaction_resp)
-	//for i := 1; i < 100000; i++ {
-	//	faker.FakeData(&reqv)
-	//	faker.FakeData(&resp)
-	//	reqvJson, _ := json.Marshal(reqv)
-	//	respJson, _ := json.Marshal(resp)
-	//	err := conn.QueryRow(context.Background(), `insert into request_response values (default, default, default, $1, $2) returning guid_transaction`,
-	//		reqvJson, respJson).Scan(&transaction_resp)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//}
 
 }

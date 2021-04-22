@@ -17,6 +17,20 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(conn)
-
+	var guid string
+	rows, err := conn.Query(context.Background(), `select guid_transaction
+	from request_response
+	where (request -> 'Applicant') @> '{"Cur_Flt": ["78"]}';`)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for rows.Next() {
+		err = rows.Scan(&guid)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(guid)
+	}
+	defer rows.Close()
+	//fmt.Println(conn)
 }

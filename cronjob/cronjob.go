@@ -14,6 +14,7 @@ type Topic struct {
 
 func main() {
 	opts := nats.GetDefaultOptions()
+	fmt.Printf("hello, job started")
 	opts.Timeout = 5 * time.Second
 	opts.ReconnectWait = 10 * time.Second
 	opts.Verbose = true

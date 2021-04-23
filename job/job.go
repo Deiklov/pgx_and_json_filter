@@ -10,6 +10,7 @@ func main() {
 	nc, _ := nats.Connect(nats.DefaultURL)
 	ch := make(chan *nats.Msg, 64)
 	ch2 := make(chan *nats.Msg, 64)
+	fmt.Printf("hello, job started")
 	_, err := nc.ChanSubscribe("kek", ch)
 	if err != nil {
 		log.Fatal(err)
@@ -26,6 +27,5 @@ func main() {
 	fmt.Println(string(msg.Data))
 	msg = <-ch
 	fmt.Println(string(msg.Data))
-
 
 }

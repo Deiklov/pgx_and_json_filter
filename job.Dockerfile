@@ -19,7 +19,7 @@ RUN go build -o ./job ./job
 # Start fresh from a smaller image
 FROM alpine:3.9
 RUN apk add ca-certificates
-COPY --from=build_base /app/job /app/job
+COPY --from=build_base /app/job /app/
 WORKDIR /app
 
 

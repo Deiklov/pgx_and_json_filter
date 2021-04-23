@@ -19,8 +19,8 @@ RUN go build -o ./cronjob ./cronjob
 # Start fresh from a smaller image
 FROM alpine:3.9
 RUN apk add ca-certificates
-COPY --from=build_base /app/cronjob /app/cronjob
-WORKDIR /app
+COPY --from=build_base /app/cronjob /app/
+WORKDIR /app/
 
 
 # Run the binary program produced by `go install`

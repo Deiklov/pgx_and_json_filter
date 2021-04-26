@@ -40,6 +40,8 @@ func main() {
 			if err := nc.Drain(); err != nil {
 				log.Fatal(err)
 			}
+			fmt.Println("send message to close topic")
+
 			wg.Done()
 		}
 	}); err != nil {

@@ -1,18 +1,27 @@
 version: "3.6"
 services:
-#  nats:
-#    image: nats:alpine
-#    container_name: nats_core
-#    network_mode: host
-#    command: [ "-VV"]
-#    ports:
-#      - "4222:4222"
-#      - "8222:8222"
+  #  nats:
+  #    image: nats:alpine
+  #    container_name: nats_core
+  #    network_mode: host
+  #    command: [ "-VV"]
+  #    ports:
+  #      - "4222:4222"
+  #      - "8222:8222"
   nats-streaming:
     image: nats-streaming:alpine
-    command: --store FILE --dir datastore -cid cluster1 -m 8222
-#    depends_on:
-#      - nats
+    command: --store FILE --dir /datastore -cid cluster1 -m 8222 -SV
+    volumes:
+      - "./stan:/datastore"
+    network_mode: host
+  pg_db:
+    image: postgres:13
+    environment:
+      - POSTGRES_PASSWORD=test_db
+      - POSTGRES_USER=test_user
+      - POSTGRES_DB=test_db
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
     network_mode: host
   def-job:
     image: golang:alpine

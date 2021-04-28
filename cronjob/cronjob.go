@@ -1,8 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"github.com/google/uuid"
+	_ "github.com/jackc/pgx/stdlib"
+	"github.com/jackc/pgx/v4"
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/stan.go"
 	"log"
 	"sync"
 	"time"
@@ -21,47 +26,34 @@ func main() {
 		log.Fatal(err)
 	}
 	defer nc.Close()
-	uniqueReplyTo := nats.NewInbox()
 
-	var mCnt int
+	connConfig, err := pgx.ParseConfig("postgres://test_user:test_password@localhost:5432/test_db?sslmode=disable")
+	if err != nil {
+		log.Fatal(err)
+	}
+	connPgx, err := pgx.ConnectConfig(context.Background(), connConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(connPgx)
+
+
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	//conn, err := stan.Connect("cluster1", "clientID1", stan.NatsConn(nc))
-	//fmt.Println(conn)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//stan.NatsConn(nc)
-	if _, err := nc.Subscribe(uniqueReplyTo, func(m *nats.Msg) {
-		fmt.Println(string(m.Data))
-		//получили ответ от воркера
-		//todo может быть гонка(нету тк таски идут последовательно)
-		//todo ответ если не смогли обработать сообщение
-		//todo проверить когда топик удаляется
-		//todo  добавить запись в postgresql и проверить
-		//todo схема плоха тем что будет бесконечный цикл при ошибке
-		//todo таски вырубаются по таймаутам, крон берет из базы только id
-		mCnt += 1
-		if mCnt == taskCnt {
-			if err := nc.Publish("notifications", []byte("{type:close}")); err != nil {
-				log.Fatal(err)
-			}
-			//закрывем nats соединение
-			if err := nc.Drain(); err != nil {
-				log.Fatal(err)
-			}
-			fmt.Println("send message to close topic")
-
-			wg.Done()
-		}
-	}); err != nil {
+	conn, err := stan.Connect("cluster1", uuid.New().String(), stan.NatsConn(nc))
+	fmt.Println(conn)
+	if err != nil {
 		log.Fatal(err)
 	}
-
+	ackHandler := func(ackedNuid string, err error) {
+		fmt.Printf("err %v\n", err)
+		fmt.Printf("acked nuid %s\n", ackedNuid)
+	}
 	for i := 0; i < taskCnt; i++ {
 		message := []byte(fmt.Sprintf("kekmda message %d", i))
-		if err := nc.PublishRequest("applicant", uniqueReplyTo, message); err != nil {
+		nc.Publish("applicant", []byte("some data from nats connect"))
+		if _, err := conn.PublishAsync("applicant", message, ackHandler); err != nil {
 			log.Fatal(err)
 		}
 		fmt.Printf("kek.%d\n", i)

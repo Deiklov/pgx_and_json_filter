@@ -14,7 +14,7 @@ func main() {
 	wg.Add(1)
 
 	// Подписываемся на все каналалы вида kek.* ждем прихода сообщения о закрытии
-	if _, err := nc.Subscribe("topic.final", func(msg *nats.Msg) {
+	if _, err := nc.Subscribe("notifications", func(msg *nats.Msg) {
 		if bytes.Compare(msg.Data, []byte("{type:close}")) == 0 {
 			wg.Done()
 		}
@@ -22,8 +22,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if _, err := nc.QueueSubscribe("kek.>", "workers", func(m *nats.Msg) {
-		fmt.Printf("reply data %s\n", m.Reply)
+	if _, err := nc.QueueSubscribe("applicant", "workers", func(m *nats.Msg) {
+		fmt.Printf("reply %s\n", m.Reply)
 		if err := m.Respond([]byte("reply from job")); err != nil {
 			log.Fatal(err)
 		}

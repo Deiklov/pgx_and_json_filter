@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
@@ -12,10 +13,14 @@ import (
 	"time"
 )
 
+type PrimaryKey struct {
+	GuidTransaction string `json:"guid_transaction"`
+	GuidStrategy    string `json:"guid_strategy"`
+}
+
 func main() {
 	nc, _ := nats.Connect(nats.DefaultURL)
-	wg := sync.WaitGroup{}
-	wg.Add(1)
+
 	conn, err := stan.Connect("cluster1", uuid.New().String(), stan.NatsConn(nc))
 	if err != nil {
 		log.Fatal(err)
@@ -29,27 +34,47 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(connPgx)
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	//в реале ставить таймаут на 10 минут
+	time.AfterFunc(3*time.Second, wg.Done)
+
+	var pKey PrimaryKey
 
 	sub, err := conn.QueueSubscribe("applicant", "workers", func(m *stan.Msg) {
-		//ackwait время на обработку
-		fmt.Printf("got task %s\n", m.Data)
-		time.Sleep(1100 * time.Millisecond)
-		//m.Ack()
-	}, stan.AckWait(1*time.Second), stan.MaxInflight(100), stan.DeliverAllAvailable(), stan.SetManualAckMode())
+		wg.Add(1)
+		err := json.Unmarshal(m.Data, &pKey)
+		if err != nil {
+			log.Fatal(err)
+		}
+		go messageHandler(pKey, connPgx)
+		m.Ack()
+		time.AfterFunc(3*time.Second, wg.Done)
 
+	}, stan.AckWait(100*time.Second), stan.SetManualAckMode())
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	wg.Wait()
+
 	defer sub.Unsubscribe()
 
-	nc.Subscribe("applicant", func(msg *nats.Msg) {
-		fmt.Println(string(msg.Data))
-	})
-	wg.Wait()
-	//закроет коннект и все подписки
 	if err := nc.Drain(); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("job ended")
+}
+
+func messageHandler(pKey PrimaryKey, conn *pgx.Conn) {
+	//идет по grpc в api ОКР
+	fmt.Printf("analyze task, %v\n", pKey)
+	_, err := conn.Exec(context.Background(), "update jobs_result set worker_status=true where guid_transaction=$1 and guid_strategy =$2",
+		pKey.GuidTransaction, pKey.GuidStrategy)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }

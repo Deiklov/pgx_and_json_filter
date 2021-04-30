@@ -2,26 +2,30 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/jackc/pgtype"
 	_ "github.com/jackc/pgx/stdlib"
 	"github.com/jackc/pgx/v4"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
 	"log"
-	"sync"
 	"time"
 )
 
-const taskCnt = 20
+const taskCnt = 40
+
+type PrimaryKey struct {
+	GuidTransaction pgtype.UUID `json:"guid_transaction"`
+	GuidStrategy    pgtype.UUID `json:"guid_strategy"`
+}
 
 func main() {
-	opts := nats.GetDefaultOptions()
-	fmt.Printf("hello, job started\n")
-	opts.Timeout = 5 * time.Second
-	opts.ReconnectWait = 10 * time.Second
-	opts.Verbose = true
-	nc, err := opts.Connect()
+	fmt.Printf("Hello, cronjob started\n")
+
+	nc, err := nats.Connect(nats.DefaultURL)
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -35,30 +39,42 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(connPgx)
-
-
-	wg := sync.WaitGroup{}
-	wg.Add(1)
 
 	conn, err := stan.Connect("cluster1", uuid.New().String(), stan.NatsConn(nc))
-	fmt.Println(conn)
 	if err != nil {
 		log.Fatal(err)
 	}
-	ackHandler := func(ackedNuid string, err error) {
-		fmt.Printf("err %v\n", err)
-		fmt.Printf("acked nuid %s\n", ackedNuid)
-	}
-	for i := 0; i < taskCnt; i++ {
-		message := []byte(fmt.Sprintf("kekmda message %d", i))
-		nc.Publish("applicant", []byte("some data from nats connect"))
-		if _, err := conn.PublishAsync("applicant", message, ackHandler); err != nil {
-			log.Fatal(err)
-		}
-		fmt.Printf("kek.%d\n", i)
-		time.Sleep(time.Millisecond * 1000)
+
+	var transact pgtype.UUID
+	var strategy pgtype.UUID
+	primaryKeys := make([]PrimaryKey, taskCnt)
+	//вместо этого будет запрос в api ОКР
+	rows, err := connPgx.Query(context.Background(), "select guid_transaction, guid_strategy from request_response order by random() limit $1", taskCnt)
+	defer rows.Close()
+	if rows == nil || err != nil {
+		log.Fatal(err)
 	}
 
-	wg.Wait()
+	for i := 0; rows.Next(); i++ {
+		err := rows.Scan(&transact, &strategy)
+		primaryKeys[i].GuidTransaction = transact
+		primaryKeys[i].GuidStrategy = strategy
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	for i := 0; i < taskCnt; i++ {
+		message, err := json.Marshal(primaryKeys[i])
+		if err != nil {
+			log.Fatal(err)
+		}
+		time.Sleep(500 * time.Millisecond)
+		// можно публиковать синхронно, тк публикация намного быстрее чем обработка
+		fmt.Println(string(message))
+		if err := conn.Publish("applicant", message); err != nil {
+			log.Fatal(err)
+		}
+
+	}
 }

@@ -10,7 +10,7 @@ services:
   #      - "8222:8222"
   nats-streaming:
     image: nats-streaming:alpine
-    command: --store FILE --dir /datastore -cid cluster1 -m 8222 -SV
+    command: --store FILE --dir /datastore -cid cluster1 -m 8222 -SV -mi 100
     volumes:
       - "./stan:/datastore"
     network_mode: host

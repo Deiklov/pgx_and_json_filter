@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const taskCnt = 40
+const taskCnt = 10
 
 type PrimaryKey struct {
 	GuidTransaction pgtype.UUID `json:"guid_transaction"`
@@ -77,4 +77,5 @@ func main() {
 		}
 
 	}
+	fmt.Println("CronJob work ended")
 }

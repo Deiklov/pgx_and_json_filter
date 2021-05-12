@@ -36,20 +36,32 @@ func main() {
 	}
 
 	var wg sync.WaitGroup
+	var wgInner sync.WaitGroup
 
 	wg.Add(1)
 	//в реале ставить таймаут на 10 минут
-	time.AfterFunc(3*time.Second, wg.Done)
+	time.AfterFunc(15*time.Second, wg.Done)
 
 	var pKey PrimaryKey
 
 	sub, err := conn.QueueSubscribe("applicant", "workers", func(m *stan.Msg) {
 		wg.Add(1)
-		err := json.Unmarshal(m.Data, &pKey)
-		if err != nil {
+		if err := json.Unmarshal(m.Data, &pKey); err != nil {
 			log.Fatal(err)
 		}
-		go messageHandler(pKey, connPgx)
+
+		go func() {
+			wgInner.Add(1)
+			defer wgInner.Done()
+
+			fmt.Printf("analyze task, %v\n", pKey)
+			_, err := connPgx.Exec(context.Background(), "update jobs_result set worker_status=true where guid_transaction=$1 and guid_strategy =$2",
+				pKey.GuidTransaction, pKey.GuidStrategy)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}()
+		//подтвреждаем обработку сделки, чтобы она не добавилась обратно в очередь
 		m.Ack()
 		time.AfterFunc(3*time.Second, wg.Done)
 
@@ -65,16 +77,7 @@ func main() {
 	if err := nc.Drain(); err != nil {
 		log.Fatal(err)
 	}
+	//ждем пока завершатся все работающие горутины
+	wgInner.Wait()
 	fmt.Println("job ended")
-}
-
-func messageHandler(pKey PrimaryKey, conn *pgx.Conn) {
-	//идет по grpc в api ОКР
-	fmt.Printf("analyze task, %v\n", pKey)
-	_, err := conn.Exec(context.Background(), "update jobs_result set worker_status=true where guid_transaction=$1 and guid_strategy =$2",
-		pKey.GuidTransaction, pKey.GuidStrategy)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 }

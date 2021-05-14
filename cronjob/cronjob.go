@@ -11,6 +11,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -24,7 +25,8 @@ type PrimaryKey struct {
 func main() {
 	fmt.Printf("Hello, cronjob started\n")
 
-	nc, err := nats.Connect(nats.DefaultURL)
+	servers := []string{"nats://127.0.0.1:4221", "nats://127.0.0.1:4222", "nats://127.0.0.1:4223"}
+	nc, err := nats.Connect(strings.Join(servers, ","))
 
 	if err != nil {
 		log.Fatal(err)
@@ -40,7 +42,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	conn, err := stan.Connect("cluster1", uuid.New().String(), stan.NatsConn(nc))
+	conn, err := stan.Connect("test", uuid.New().String(), stan.NatsConn(nc))
 	if err != nil {
 		log.Fatal(err)
 	}

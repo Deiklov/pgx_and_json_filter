@@ -9,6 +9,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
 	"log"
+	"strings"
 	"sync"
 	"time"
 )
@@ -19,9 +20,10 @@ type PrimaryKey struct {
 }
 
 func main() {
-	nc, _ := nats.Connect(nats.DefaultURL)
+	servers := []string{"nats://127.0.0.1:4221", "nats://127.0.0.1:4222", "nats://127.0.0.1:4223"}
+	nc, _ := nats.Connect(strings.Join(servers, ","), nats.Name("natsConnect"))
 
-	conn, err := stan.Connect("cluster1", uuid.New().String(), stan.NatsConn(nc))
+	conn, err := stan.Connect("test", uuid.New().String(), stan.NatsConn(nc))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,7 +42,7 @@ func main() {
 
 	wg.Add(1)
 	//в реале ставить таймаут на 10 минут
-	time.AfterFunc(15*time.Second, wg.Done)
+	time.AfterFunc(10*time.Second, wg.Done)
 
 	var pKey PrimaryKey
 

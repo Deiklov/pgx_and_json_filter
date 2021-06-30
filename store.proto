@@ -5,24 +5,28 @@ import "google/protobuf/wrappers.proto";
 
 service Store {
   //для sheduler
-
+  //todo разбивка на работу с джобами и тасками/application/user data/tracing data
+  //---работа с jobs and tasks
   //сохранит новую полученную задачу
-  rpc BeginTesting(BeginTestInfo) returns (BeginTestResponse) {}
-  //шедулер по фильтру выбирает нужные нам заявки
-  rpc GetRequests(RequestsFilter) returns (stream TracingInfo) {}
+  rpc CreateJob(CreateJobRequest) returns (CreateJobResponse) {}
   //шедулер обновит % выполнения задачи
-  rpc UpdateJobScope(UpdateJobScopeInfo) returns (google.protobuf.BoolValue) {}
+  rpc UpdateJob(UpdateJobRequest) returns (google.protobuf.Empty) {}
+  rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse) {}
+  rpc UpdateTask(UpdateTaskRequest) returns (google.protobuf.Empty) {}
+  ///-------
+  //шедулер по фильтру выбирает нужные нам заявки
+  rpc GetApplicationIDs(ApplicationFilter) returns (stream TracingInfo) {}
   //запрос на подгрузку данных из Tracing в Postgresql
-  rpc LoadHistoricalData(LoadHistoricalDataRequest) returns (google.protobuf.BoolValue) {}
+  rpc LoadHistoricalData(LoadHistoricalDataRequest) returns (google.protobuf.Empty) {}
 
   //для worker
 
   //загрузим жирное тело реквеста для заявки
   rpc GetRequestData(TracingInfoRequest) returns (TracingContent) {}
   //сохраним полученный ответ от MEF
-  rpc SaveRequestData(NewDataFromMEF) returns (google.protobuf.BoolValue) {}
+  rpc SaveRequestData(NewDataFromMEF) returns (google.protobuf.Empty) {}
   //сохраним  отчет о тестировании
-  rpc SaveReport(JobReport) returns (google.protobuf.BoolValue) {}
+  rpc SaveReport(JobReport) returns (google.protobuf.Empty) {}
   //вернем отчет о тестировании
   rpc GetReport(JobRequest) returns (JobReport) {}
 }
@@ -32,8 +36,23 @@ message JobRequest {
   string job_id = 1;
 }
 
-message BeginTestResponse {
+message UpdateTaskRequest{
+  string task_id = 1;
+  //todo параметры для апдейта
+}
+
+message CreateJobResponse {
   //id созданной задачи
+  string job_id = 1;
+}
+
+message CreateTaskRequest {
+  string job_id = 1;
+  //вместо global_id+current_id
+  string appliciant_id = 2;
+}
+
+message CreateTaskResponse {
   string task_id = 1;
 }
 message JobReport {
@@ -49,24 +68,25 @@ message LoadHistoricalDataRequest {
   google.protobuf.Timestamp request_period_end = 2;
 }
 
-message UpdateJobScopeInfo {
+message UpdateJobRequest {
   //id задачи для которой обновляем статус
   string job_id = 1;
   //строкове значение статуса,пример: 10%, 0%, error, 100%, stopped
-  string scope = 2;
+  string progress = 2;
 }
 
-message RequestsFilter {
+message ApplicationFilter {
   //текстовый фильтр на заявки
   string filter = 1;
+  //todo limits.rows limits.errors limits.row
 }
 
-message BeginTestInfo {
+message CreateJobRequest {
   //cv_ucl cv_cc или другие
   string bs_code = 1;
   //логин того, кто запускает
   string owner = 2;
-  //время начала задачи
+  //время начала задачи, опционально
   google.protobuf.Timestamp request_begin = 3;
 }
 

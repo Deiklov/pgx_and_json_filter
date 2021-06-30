@@ -3,59 +3,63 @@ syntax = "proto3";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/wrappers.proto";
 
-service Store{
+service Store {
   //для sheduler
-  rpc BeginTesting(BeginTestInfo) returns (BeginTestResponse){}//сохранит новую полученную задачу
-  rpc GetRequests(RequestsFilter) returns (stream TracingInfo){}//шедулер по фильтру выбирает нужные нам заявки
-  rpc UpdateJobScope(UpdateJobScopeInfo) returns (google.protobuf.BoolValue){}//шедулер обновит % выполнения задачи
+
+  //сохранит новую полученную задачу
+  rpc BeginTesting(BeginTestInfo) returns (BeginTestResponse) {}
+  //шедулер по фильтру выбирает нужные нам заявки
+  rpc GetRequests(RequestsFilter) returns (stream TracingInfo) {}
+  //шедулер обновит % выполнения задачи
+  rpc UpdateJobScope(UpdateJobScopeInfo) returns (google.protobuf.BoolValue) {}
 
   //для worker
-  rpc GetRequestData(TracingInfoRequest) returns (TracingContent){}//загрузим жирное тело реквеста для заявки
-  rpc SaveRequestData(NewDataFromMEF) returns (google.protobuf.BoolValue){}//сохраним полученный ответ от MEF
-  rpc SaveReport(JobReport) returns (google.protobuf.BoolValue){}//сохраним  отчет о тестировании
-  rpc GetReport(JobRequest) returns (JobReport){}//вернем отчет
+
+  //загрузим жирное тело реквеста для заявки
+  rpc GetRequestData(TracingInfoRequest) returns (TracingContent) {}
+  //сохраним полученный ответ от MEF
+  rpc SaveRequestData(NewDataFromMEF) returns (google.protobuf.BoolValue) {}
+  //сохраним  отчет о тестировании
+  rpc SaveReport(JobReport) returns (google.protobuf.BoolValue) {}
+  //вернем отчет о тестировании
+  rpc GetReport(JobRequest) returns (JobReport) {}
 }
 
-message JobRequest{
+message JobRequest {
   //id задачи для которой обновляем статус
   string job_id = 1;
 }
 
 message BeginTestResponse {
+  //id созданной задачи
   string task_id = 1;
 }
-message JobReport{
+message JobReport {
   //id задачи для которой обновляем статус
   string job_id = 1;
   bytes report_data = 2;
 }
 
 
-message UpdateJobScopeInfo{
+message UpdateJobScopeInfo {
   //id задачи для которой обновляем статус
   string job_id = 1;
-  //строкове значение статуса,пример: 10%,0%,error,100%,stoped
+  //строкове значение статуса,пример: 10%, 0%, error, 100%, stopped
   string scope = 2;
 }
 
-message RequestsFilter{
+message RequestsFilter {
   //текстовый фильтр на заявки
   string filter = 1;
 }
 
-message JobEndResponse{
-  bool is_ok = 1;
-}
-
-message BeginTestInfo{
-  string service_code = 1;
+message BeginTestInfo {
+  //cv_ucl cv_cc или другие
+  string bs_code = 1;
+  //логин того, кто запускает
   string owner = 2;
+  //время начала задачи
   google.protobuf.Timestamp request_begin = 3;
-  int64 orders_count = 4;
-}
-
-message BeginTestStatus{
-  bool is_ok = 1;
 }
 
 message TracingInfoRequest {
@@ -73,6 +77,7 @@ message TracingContent {
 message NewDataFromMEF {
   string current_id = 1;
   string global_id = 2;
+  //новый ответ, который получили при вызове стратегии в MEF
   bytes response_content = 3;
 }
 

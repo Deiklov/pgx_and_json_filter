@@ -4,21 +4,32 @@ import "google/protobuf/timestamp.proto";
 import "google/protobuf/wrappers.proto";
 
 service Store{
-  //для шедулера
-  rpc BeginTesting(BeginTestInfo) returns (google.protobuf.BoolValue){}//сохранит заявку пользователя о полученной задаче
+  //для sheduler
+  rpc BeginTesting(BeginTestInfo) returns (BeginTestResponse){}//сохранит новую полученную задачу
   rpc GetRequests(RequestsFilter) returns (stream TracingInfo){}//шедулер по фильтру выбирает нужные нам заявки
   rpc UpdateJobScope(UpdateJobScopeInfo) returns (google.protobuf.BoolValue){}//шедулер обновит % выполнения задачи
-  rpc EndJob(JobEndRequest) returns (google.protobuf.BoolValue){}//шедулер пометит то, что задача завершена
 
-  //для воркеров
+  //для worker
   rpc GetRequestData(TracingInfoRequest) returns (TracingContent){}//загрузим жирное тело реквеста для заявки
-  rpc SaveRequestData(NewDataFromMEF) returns (google.protobuf.BoolValue){}//сохраним полученный ответ от меф
+  rpc SaveRequestData(NewDataFromMEF) returns (google.protobuf.BoolValue){}//сохраним полученный ответ от MEF
+  rpc SaveReport(JobReport) returns (google.protobuf.BoolValue){}//сохраним  отчет о тестировании
+  rpc GetReport(JobRequest) returns (JobReport){}//вернем отчет
 }
 
-message JobEndRequest{
+message JobRequest{
   //id задачи для которой обновляем статус
   string job_id = 1;
 }
+
+message BeginTestResponse {
+  string task_id = 1;
+}
+message JobReport{
+  //id задачи для которой обновляем статус
+  string job_id = 1;
+  bytes report_data = 2;
+}
+
 
 message UpdateJobScopeInfo{
   //id задачи для которой обновляем статус

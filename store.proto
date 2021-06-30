@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+service Store{
+  //для шедулера
+  rpc BeginTesting(BeginTestInfo) returns (google.protobuf.BoolValue){}//сохранит заявку пользователя о полученной задаче
+  rpc GetRequests(RequestsFilter) returns (stream TracingInfo){}//шедулер по фильтру выбирает нужные нам заявки
+  rpc UpdateJobScope(UpdateJobScopeInfo) returns (google.protobuf.BoolValue){}//шедулер обновит % выполнения задачи
+  rpc EndJob(JobEndRequest) returns (google.protobuf.BoolValue){}//шедулер пометит то, что задача завершена
+
+  //для воркеров
+  rpc GetRequestData(TracingInfoRequest) returns (TracingContent){}//загрузим жирное тело реквеста для заявки
+  rpc SaveRequestData(NewDataFromMEF) returns (google.protobuf.BoolValue){}//сохраним полученный ответ от меф
+}
+
+message JobEndRequest{
+  //id задачи для которой обновляем статус
+  string job_id = 1;
+}
+
+message UpdateJobScopeInfo{
+  //id задачи для которой обновляем статус
+  string job_id = 1;
+  //строкове значение статуса,пример: 10%,0%,error,100%,stoped
+  string scope = 2;
+}
+
+message RequestsFilter{
+  //текстовый фильтр на заявки
+  string filter = 1;
+}
+
+message JobEndResponse{
+  bool is_ok = 1;
+}
+
+message BeginTestInfo{
+  string service_code = 1;
+  string owner = 2;
+  google.protobuf.Timestamp request_begin = 3;
+  int64 orders_count = 4;
+}
+
+message BeginTestStatus{
+  bool is_ok = 1;
+}
+
+message TracingInfoRequest {
+  // Идентификатор вызова бизнес-сервиса
+  string current_id = 1;
+  // Идентификатор дерева вызовов бизнес-сервисов
+  string global_id = 2;
+}
+
+message TracingContent {
+  bytes request_content = 1;
+  bytes response_content = 2;
+}
+
+message NewDataFromMEF {
+  string current_id = 1;
+  string global_id = 2;
+  bytes response_content = 3;
+}
+
+message TracingInfo {
+  // Идентификатор вызова бизнес-сервиса
+  string current_id = 1;
+  // Идентификатор дерева вызовов бизнес-сервисов
+  string global_id = 2;
+  // Идентификатор родительского вызова бизнес-сервиса
+  string parent_id = 3;
+  // Код бизнес-сервиса
+  string bs_code = 4;
+}
+

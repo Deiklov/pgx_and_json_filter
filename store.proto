@@ -12,6 +12,8 @@ service Store {
   rpc GetRequests(RequestsFilter) returns (stream TracingInfo) {}
   //шедулер обновит % выполнения задачи
   rpc UpdateJobScope(UpdateJobScopeInfo) returns (google.protobuf.BoolValue) {}
+  //запрос на подгрузку данных из Tracing в Postgresql
+  rpc LoadHistoricalData(LoadHistoricalDataRequest) returns (google.protobuf.BoolValue) {}
 
   //для worker
 
@@ -40,6 +42,12 @@ message JobReport {
   bytes report_data = 2;
 }
 
+message LoadHistoricalDataRequest {
+  // Дата начала периода (включительно)
+  google.protobuf.Timestamp request_period_begin = 1;
+  // Дата окончания периода (исключительно)
+  google.protobuf.Timestamp request_period_end = 2;
+}
 
 message UpdateJobScopeInfo {
   //id задачи для которой обновляем статус

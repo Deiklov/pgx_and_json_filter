@@ -11,6 +11,7 @@ service Store {
   rpc CreateJob(CreateJobRequest) returns (CreateJobResponse) {}
   //шедулер обновит % выполнения задачи
   rpc UpdateJob(UpdateJobRequest) returns (google.protobuf.Empty) {}
+
   rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse) {}
   rpc UpdateTask(UpdateTaskRequest) returns (google.protobuf.Empty) {}
   ///-------
@@ -38,6 +39,7 @@ message JobRequest {
 
 message UpdateTaskRequest{
   string task_id = 1;
+  uint64 progress = 2;
   //todo параметры для апдейта
 }
 
@@ -49,12 +51,13 @@ message CreateJobResponse {
 message CreateTaskRequest {
   string job_id = 1;
   //вместо global_id+current_id
-  string appliciant_id = 2;
+  TracingInfo tracing_info = 2;
 }
 
 message CreateTaskResponse {
   string task_id = 1;
 }
+
 message JobReport {
   //id задачи для которой обновляем статус
   string job_id = 1;
@@ -78,16 +81,27 @@ message UpdateJobRequest {
 message ApplicationFilter {
   //текстовый фильтр на заявки
   string filter = 1;
-  //todo limits.rows limits.errors limits.row
+  uint64 max_rows = 2;
+}
+//для джобы
+message JobSettings {
+  //ограничение на общее кол-во заявок
+  uint64 max_rows = 1;
+  uint64 max_errors = 2;
+  //на обстрел MEF
+  uint64 limit_rate = 3;
 }
 
 message CreateJobRequest {
   //cv_ucl cv_cc или другие
-  string bs_code = 1;
+  string bs_code = 1;//todo может не нужен
   //логин того, кто запускает
   string owner = 2;
   //время начала задачи, опционально
   google.protobuf.Timestamp request_begin = 3;
+  ApplicationFilter application_filter = 4;
+  JobSettings jobs_settings = 5;
+  string job_type = 6;//todo enum
 }
 
 message TracingInfoRequest {

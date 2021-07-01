@@ -3,27 +3,37 @@ syntax = "proto3";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/wrappers.proto";
 
+
 service Store {
   //для sheduler
   //todo разбивка на работу с джобами и тасками/application/user data/tracing data
   //---работа с jobs and tasks
   //сохранит новую полученную задачу
   rpc CreateJob(CreateJobRequest) returns (CreateJobResponse) {}
-  //шедулер обновит % выполнения задачи
   rpc UpdateJob(UpdateJobRequest) returns (google.protobuf.Empty) {}
+  rpc GetJobs() returns() {}//repeated будет
+  rpc GetJobContent() returns(){}//по id возвращаю отчет
 
   rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse) {}
   rpc UpdateTask(UpdateTaskRequest) returns (google.protobuf.Empty) {}
+  //список всех тасков по джобе с контентом
+  rpc GetTasks() returns(stream ) {}
+
   ///-------
-  //шедулер по фильтру выбирает нужные нам заявки
+  //applications data
+  //шедулер по фильтру выбирает нужные нам заявки, по нашей базе проходит
   rpc GetApplicationIDs(ApplicationFilter) returns (stream TracingInfo) {}
-  //запрос на подгрузку данных из Tracing в Postgresql
-  rpc LoadHistoricalData(LoadHistoricalDataRequest) returns (google.protobuf.Empty) {}
+  //по нашей базе делает выборку
+  rpc GetApplicationContent(TracingInfoRequest) returns (TracingContent) {}
+  ///external data, проксирует запросы в tracing
+  rpc GetTracingInfoList(TracingInfoScanRequest) returns (stream TracingInfo) {}
+  //заполняется постгря
+  rpc DownloadTracingContent(TracingInfoRequest) returns (google.protobuf.Empty) {}
 
   //для worker
 
   //загрузим жирное тело реквеста для заявки
-  rpc GetRequestData(TracingInfoRequest) returns (TracingContent) {}
+  //  rpc GetRequestData(TracingInfoRequest) returns (TracingContent) {}
   //сохраним полученный ответ от MEF
   rpc SaveRequestData(NewDataFromMEF) returns (google.protobuf.Empty) {}
   //сохраним  отчет о тестировании
@@ -32,14 +42,34 @@ service Store {
   rpc GetReport(JobRequest) returns (JobReport) {}
 }
 
+message TracingInfoRequest {
+  // Идентификатор вызова бизнес-сервиса
+  string current_id = 1;
+  // Идентификатор дерева вызовов бизнес-сервисов
+  string global_id = 2;
+}
+
+message TracingInfoScanRequest {
+  // Период, за который необходимо выдать информацию по трейсингу
+  // Формат даты: количество милисекунд с начала 1970-01-01T00:00:00Z.
+  // Дата начала периода предоставления списка (включительно)
+  google.protobuf.Timestamp request_period_begin = 1;
+  // Дата окончания периода предоставления списка (исключительно)
+  google.protobuf.Timestamp request_period_end = 2;
+  // Код бизнес-сервиса согласно справочнику - https://confluence.ca.sbrf.ru/pages/viewpage.action?pageId=3891169477
+  // Необязательный параметр
+  string bs_code = 3;
+}
+
 message JobRequest {
   //id задачи для которой обновляем статус
   string job_id = 1;
 }
 
-message UpdateTaskRequest{
+message UpdateTaskRequest {
   string task_id = 1;
-  uint64 progress = 2;
+  uint64 status = 2;
+  bytes content = 3;
   //todo параметры для апдейта
 }
 
@@ -64,7 +94,7 @@ message JobReport {
   bytes report_data = 2;
 }
 
-message LoadHistoricalDataRequest {
+message LoadTasksRequest {
   // Дата начала периода (включительно)
   google.protobuf.Timestamp request_period_begin = 1;
   // Дата окончания периода (исключительно)
@@ -104,12 +134,6 @@ message CreateJobRequest {
   string job_type = 6;//todo enum
 }
 
-message TracingInfoRequest {
-  // Идентификатор вызова бизнес-сервиса
-  string current_id = 1;
-  // Идентификатор дерева вызовов бизнес-сервисов
-  string global_id = 2;
-}
 
 message TracingContent {
   bytes request_content = 1;
